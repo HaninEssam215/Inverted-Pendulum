@@ -63,7 +63,6 @@ M = math.transpose(M);
     ALPHA = ALPHA.reverse();
     a = a.reverse()
     var ALPHA_a = math.subtract(ALPHA, a);
-   // var ALPHA_a = math.subtract(a.reverse(), ALPHA.reverse()); // Fix the order of subtraction
 
 /***********5. Calculate the gain matrix K***********/
     var K = math.multiply(ALPHA_a, T);
