@@ -72,7 +72,7 @@ M = math.transpose(M);
 
 const A = math.matrix([[0, 1, 0, 0], [0, -11.2171, -0.9238, 0.0082], [0, 0, 0, 1], [0, 54.6289,  52.2752, -0.4614]]);
 const B = math.matrix([[0],[0.8371], [0], [-4.0768]]);
-var k = place(A,B,[9,0.2,0.3,0.4]);
+var k = place(A,B,[-1,-2,-3,-4]);
 console.log(k.format());
 
 module.exports = place;
