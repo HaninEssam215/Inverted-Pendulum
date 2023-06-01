@@ -8,8 +8,9 @@
 const math = require('mathjs');
 const nerdamer = require('nerdamer');
 const polynomial = require('polynomial');
+const extractCoefficients = require('./Extract_Coefficients.js');
 
-export function place(A, B, desiredPoles){
+function place(A, B, desiredPoles){
 
 /***********1. Check Controllability***********/
 const AB = math.map(math.multiply(A,B), (value) => value.toFixed(3));
@@ -33,8 +34,14 @@ M = math.transpose(M);
 
 
   //Determine values of a
-  const polynomialform = polynomial.fromRoots(eigenvaluesArray).toString();
-  var a = [11.67850000000004, -47.54758704006962, -535.9099681004082, 0];
+  const polynomialForm = polynomial.fromRoots(eigenvaluesArray).toString();
+  var a = extractCoefficients(polynomialForm);
+  a.shift(); // Remove the first element from the array
+  for(var i = a.length; i <= (3); i++)
+  {
+      a.push(0); // Add zero at the end of the  array
+  }
+  //var a = [11.67850000000004, -47.54758704006962, -535.9099681004082, 0];
 
   //Determine W matrix
   var W = math.matrix([[a[2],a[1],a[0],1],[a[1],a[0],1,0],[a[0],1,0,0],[1,0,0,0]]);
@@ -46,26 +53,17 @@ M = math.transpose(M);
 /***********4. Get the desired characteristic equation***********/
     var desiredPolynomialForm = polynomial.fromRoots(desiredPoles).toString();
   //Get the coefficients alpha
-    var coef = desiredPolynomialForm.split('+').map(v=>v.trim()).map(v=>v.split('x')[0]).map(v=>v.replace(/^\*+|\*+$/g, ''));
-      //for coefficient = 1 
-    for(var i = 0; i < coef.length ; i++)
+    var ALPHA = extractCoefficients(desiredPolynomialForm);
+    ALPHA.shift(); // Remove the first element from the ALPHA array
+    for(var i = ALPHA.length; i <= (3); i++)
     {
-        if(coef[i] == '')
-        {
-          coef[i] = 1;
-        }
-    }
-
-  //Coefficients matrix = alpha - a
-    var ALPHA= [];
-    for (var i =0; i<(coef.length-1); i++)
-    {
-      ALPHA[i] = coef[i+1];
+        ALPHA.push(0); // Add zero at the end of the ALPHA array
     }
     ALPHA = ALPHA.map(Number);
     ALPHA = ALPHA.reverse();
     a = a.reverse()
     var ALPHA_a = math.subtract(ALPHA, a);
+   // var ALPHA_a = math.subtract(a.reverse(), ALPHA.reverse()); // Fix the order of subtraction
 
 /***********5. Calculate the gain matrix K***********/
     var K = math.multiply(ALPHA_a, T);
@@ -73,5 +71,9 @@ M = math.transpose(M);
 
 }
 
+const A = math.matrix([[0, 1, 0, 0], [0, -11.2171, -0.9238, 0.0082], [0, 0, 0, 1], [0, 54.6289,  52.2752, -0.4614]]);
+const B = math.matrix([[0],[0.8371], [0], [-4.0768]]);
+var k = place(A,B,[9,0.2,0.3,0.4]);
+console.log(k.format());
 
-
+module.exports = place;
