@@ -1,4 +1,4 @@
-const { abs, cos, sin, sign } = require("mathjs");
+const { abs, cos, sin, sign, pi } = require("mathjs");
 
 
 var x = 0;
@@ -25,33 +25,39 @@ function non_linear_model(force, Tsampling) {
     var k1_thetadot = thetadot;
     var k1_xddot = force - N - (b * xdot);
     var k1_thetaddot =
-        (((3 / m )/ l) / l) *( (-N * l * cos(theta)) + (P * l * sin(theta)) - (d * thetadot));
+        (((3 / m) / l) / l) * ((-N * l * cos(theta)) + (P * l * sin(theta)) - (d * thetadot));
 
-    // Compute intermediate states
+    // Compute intermediate states using k1 derivatives
     var xdot_intermediate = xdot + (h / 2) * k1_xddot;
     var thetadot_intermediate = thetadot + (h / 2) * k1_thetaddot;
+    var theta_intermediate = theta + (h / 2) * k1_thetadot;
 
     // Compute derivatives at the intermediate states
     var k2_xdot = xdot_intermediate;
     var k2_thetadot = thetadot_intermediate;
     var k2_xddot = force - N - (b * xdot_intermediate);
     var k2_thetaddot =
-    (((3 / m )/ l) / l) *( (-N * l * cos(theta)) + (P * l * sin(theta)) - (d * thetadot));
+        (((3 / m) / l) / l) * ((-N * l * cos(theta_intermediate)) + (P * l * sin(theta_intermediate)) - (d * thetadot_intermediate));
 
     // Update states using weighted averages of derivatives
-    x += h * (k1_xdot + k2_xdot) / 2;
-    theta += h * (k1_thetadot + k2_thetadot) / 2;
-    xdot += h * (k1_xddot + k2_xddot) / 2;
-    thetadot += h * (k1_thetaddot + k2_thetaddot) / 2;
+    x += h * (k1_xdot + k2_xdot)/2;
+    theta += h * (k1_thetadot + k2_thetadot)/2;
+    xdot += h * (k1_xddot + k2_xddot)/2;
+    thetadot += h * (k1_thetaddot + k2_thetaddot)/2;
+
+    // Update thetaddot after updating theta and thetadot
+  //  thetaddot =
+       // (((3 / m) / l) / l) * ((-N * l * cos(theta)) + (P * l * sin(theta)) - (d * thetadot));
 
     // Compute additional variables
     xddot = force - N - (b * xdot);
     var acc = acceleration(xdot, xddot, Kt);
     N = m * ((acc / M) - (l * thetadot * thetadot * sin(theta)) + (l * thetaddot * cos(theta)));
-    P = m * ((-l * thetadot * thetadot * cos(theta) )- (l * thetaddot * sin(theta) )+ g);
+    P = m * ((-l * thetadot * thetadot * cos(theta)) - (l * thetaddot * sin(theta)) + g);
 
     return [x, xdot, theta, thetadot];
 }
+
 
 function acceleration(xdot, xddot, Kt) {
     var friction = 0;
@@ -79,7 +85,7 @@ var numSteps = 15 / Tsampling;
 for (var i = 0; i <= 15; i = i+0.005) {
     var [position, velocity, angle, angularVelocity] = non_linear_model(50, Tsampling);
    // console.log('x: ' + position + ', xdot: ' + velocity + ', theta: ' + angle + ', thetadot: ' + angularVelocity);
-   console.log(angularVelocity);
+   console.log(position);
 }
 
 
