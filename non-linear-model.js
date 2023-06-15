@@ -1,10 +1,9 @@
-const { abs, cos, sin, sign, pi } = require("mathjs");
+const { cos, sin } = require("mathjs");
 
 
 var x = 0;
 var xdot = 0;
 var xddot = 0;
-var xddot_F = 0;
 var theta = 0.18;
 var thetadot = 0;
 var thetaddot = 0;
@@ -39,9 +38,9 @@ function non_linear_model(force, Tsampling) {
     // Compute derivatives at the current state
   N = m * Ndd;
   P = m * (Pdd + g);
-  xddot = (force - N - (b * dXd))/M;
-  //frictionForce = func(xdot, xddot_F, Kt);
- // xddot = frictionForce/M;
+  var BDZ = (force - N - (b * dXd));
+  var ADZ = DeadZone(dXd,BDZ);
+  xddot = ADZ/M;
   x_T_1 = x;
   xdot += h * xddot;
   x += h * xdot;
@@ -61,155 +60,47 @@ function non_linear_model(force, Tsampling) {
   P_term_T_2 = P_term_T_1;
   P_term_T_1 = P_term;
   N_term = x + l*sin(theta);
- // N_term = xddot - (l*thetadot*thetadot*sin(theta)) + (l*thetaddot*cos(theta));
   P_term = l*cos(theta);
- //P_term = -l*thetadot*thetadot*cos(theta) - l*thetaddot*sin(theta);
   
   return [x, xdot, theta, thetadot];
 }
-function func(xdot , xddot, Kt)
-{
-    var fr = 0;
-    var y = 0;
-    if (xdot < - 0.01)
+
+function DeadZone(dXd,BDZ) {
+  var fr =0;
+  if(dXd<-0.01)
+  {
+   fr = 35.4115*Kt; 
+    return BDZ + fr;
+  }
+  else if(dXd>0.01)
+  {
+    fr = -35.4115*Kt; 
+    return BDZ + fr;
+  }
+  else
+  {
+    if((BDZ <= 35.4115*Kt) && (BDZ >= -35.4115*Kt))
     {
-        fr = 35.4115*Kt;
-        y = xddot + fr;
-    }
-    else if (xdot > 0.01)
-    {
-        fr = -35.4115*Kt;
-        y = xddot + fr;
+      return 0;
     }
     else
     {
-        if(abs(xddot <= 35.4115*Kt))
-        {
-            y = 0;
-        }
-        else{
-            if(xddot == 0)
-            {
-                y = 0;
-            }
-            else
-            {
-                if(xddot > 35.4115*Kt)
-                {
-                    y = xddot - 35.4115*Kt;
-                }
-                else{
-                    y = xddot + 35.4115 * Kt;
-                }
-            }
-        }
+      if(BDZ > 35.4115*Kt)
+      {
+        return BDZ - 35.4115*Kt;
+      }
+      else
+      {
+        return BDZ + 35.4115*Kt;
+      }
     }
-
-    return y;
-}
-var Tsampling = 0.005; // Sampling time or step size
-
-for (var i = 0; i <= 15; i = i+0.005) {
-    var [position, velocity, angle, angularVelocity] = non_linear_model(10, Tsampling);
-   // console.log('x: ' + position + ', xdot: ' + velocity + ', theta: ' + angle + ', thetadot: ' + angularVelocity);
-   console.log(angle);
-}
-
-
-
-/*const { abs, cos, sin, sign, pi } = require("mathjs");
-
-
-var x = 0;
-var xdot = 0;
-var xddot = 0;
-var theta = 0.18;
-var thetadot = 0;
-var thetaddot = 0;
-var N = 0;
-var P = 0;
-var b = 13.4;
-var l = 0.154;
-var m = 0.15;
-var d = 0.002;
-var M = 1.1571;
-var Kt = 0.00185121;
-var g = 9.81;
-
-function non_linear_model(force, Tsampling) {
-    var h = Tsampling;
-
-    // Compute derivatives at the current state
-    var k1_xdot = xdot;
-    var k1_thetadot = thetadot;
-    var k1_xddot = force - N - (b * xdot);
-    var k1_thetaddot =
-        (((3 / m) / l) / l) * ((-N * l * cos(theta)) + (P * l * sin(theta)) - (d * thetadot));
-
-    // Compute intermediate states using k1 derivatives
-    var xdot_intermediate = xdot + (h / 2) * k1_xddot;
-    var thetadot_intermediate = thetadot + (h / 2) * k1_thetaddot;
-    var theta_intermediate = theta + (h / 2) * k1_thetadot;
-
-    // Compute derivatives at the intermediate states
-    var k2_xdot = xdot_intermediate;
-    var k2_thetadot = thetadot_intermediate;
-    var k2_xddot = force - N - (b * xdot_intermediate);
-    var k2_thetaddot =
-        (((3 / m) / l) / l) * ((-N * l * cos(theta_intermediate)) + (P * l * sin(theta_intermediate)) - (d * thetadot_intermediate));
-
-    // Update states using weighted averages of derivatives
-    x += h * (k1_xdot + k2_xdot)/2;
-    theta += h * (k1_thetadot + k2_thetadot)/2;
-    xdot += h * (k1_xddot + k2_xddot)/2;
-    thetadot += h * (k1_thetaddot + k2_thetaddot)/2;
-
-    // Update thetaddot after updating theta and thetadot
-  //  thetaddot =
-       // (((3 / m) / l) / l) * ((-N * l * cos(theta)) + (P * l * sin(theta)) - (d * thetadot));
-
-    // Compute additional variables
-    xddot = force - N - (b * xdot);
-    var acc = acceleration(xdot, xddot, Kt);
-    N = m * ((acc / M) - (l * thetadot * thetadot * sin(theta)) + (l * thetaddot * cos(theta)));
-    P = m * ((-l * thetadot * thetadot * cos(theta)) - (l * thetaddot * sin(theta)) + g);
-
-    return [x, xdot, theta, thetadot];
-}
-
-
-function acceleration(xdot, xddot, Kt) {
-    var friction = 0;
-    var y = 0;
-    if (xdot != 0) {
-        friction = -1 * 3662.9 * Kt * sign(xdot);
-        y = xddot + friction;
-    } else {
-        if (abs(xddot) < 3662.9 * Kt) {
-            y = 0;
-        } else {
-            if (xddot == 0) {
-                y = 0;
-            } else {
-                y = xddot + sign(xddot) * -1 * 3662.9 * Kt;
-            }
-        }
-    }
-    return y;
+  }
 }
 
 var Tsampling = 0.005; // Sampling time or step size
-var numSteps = 15 / Tsampling;
 
-for (var i = 0; i <= 15; i = i+0.005) {
+for (var i = 0; i <= 60; i = i+0.005) {
     var [position, velocity, angle, angularVelocity] = non_linear_model(50, Tsampling);
    // console.log('x: ' + position + ', xdot: ' + velocity + ', theta: ' + angle + ', thetadot: ' + angularVelocity);
    console.log(position);
 }
-*/
-
-  
-
-
-
-
